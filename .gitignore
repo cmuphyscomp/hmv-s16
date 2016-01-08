@@ -1,0 +1,9 @@
+# cruft
+.DS_Store
+
+# object files
+*.pyc
+
+# backups
+*~
+
