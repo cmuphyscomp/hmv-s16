@@ -11,9 +11,10 @@ import sys, os, argparse
 # Make sure that the Python libraries also contained within this course package
 # are on the load path.  This adds the parent folder to the load path, assuming that this
 # script is still located with the scripts/ subfolder of the Python library tree.
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 import optitrack.csv_reader as csv
+from optitrack.geometry import *
 
 ################################################################
 # begin the script
@@ -38,3 +39,13 @@ if __name__=="__main__":
         if args.verbose:
             print "Position track:"
             for point in body.positions: print point
+
+        for quat in body.rotations:
+            if quat is not None:
+                # matrix = quaternion_to_rotation_matrix(quat)
+                # print matrix
+                xaxis, yaxis = quaternion_to_xaxis_yaxis(quat)
+                print xaxis, yaxis
+                
+
+        
