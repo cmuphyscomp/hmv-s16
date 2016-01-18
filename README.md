@@ -11,6 +11,6 @@ The following command will check out a copy of this repository:
 Contents
 --------
 
-The python/ contains support libraries and scripts for both RhinoPython and CPython.
+The python/  folder contains support libraries and scripts for both RhinoPython and CPython.
 
 
