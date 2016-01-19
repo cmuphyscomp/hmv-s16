@@ -8,11 +8,19 @@ import clr
 clr.AddReference("Grasshopper")
 import Grasshopper as gh
 
+# Make sure that the Python libraries that are also contained within this course
+# package are on the load path. This adds the python/ folder to the load path
+# *after* the current folder.  The path manipulation assumes that this module is
+# still located within the Grasshopper/MocapDemo subfolder, and so the package
+# modules are at ../../python.
+import sys, os
+sys.path.insert(1, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))), "python"))
+
 # import the Optitrack stream decoder
 import optirx
 
 # import a quaternion conversion function
-from geometry import quaternion_to_xaxis_yaxis
+from optitrack.geometry import quaternion_to_xaxis_yaxis
 
 #== support functions ====================================================
 def vectors_to_data_tree(vector_list):
