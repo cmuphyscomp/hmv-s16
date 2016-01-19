@@ -1,16 +1,17 @@
-2016-01-18
+2016-01-19
 
-This is a self-contained demo of receiving real-time Optitrack motion capture rigid body data.
+This is a demo for using Optitrack motion capture rigid body data.
+
+It uses the Python packages found within the same course tree.  These are loaded
+using relative paths so the scripts may break if the folder structure changes.
 
 Files:
 
-MocapDemo.gh	Grasshopper patch for the demo
-demo.py		reference copy of ghpython code from MocapDemo.gh
+MocapDemo.gh		Grasshopper file for the demo
 
-geometry.py	utility code for quaternions, copied from https://github.com/cmuphyscomp/hmv-s16
-optirecv.py	RhinoPython support code for the Grasshopper patch
+demo_reader.py		reference copy of ghpython script from MocapDemo.gh, CSV reader
+demo_receiver.py	reference copy of ghpython script from MocapDemo.gh, streaming mocap receiver
+optirecv.py		RhinoPython support module for the streaming mocap script
+optiload.py		RhinoPython support module for the CSV reader script
 
-optirx.py	Optitrack multicast receiver and decoder, copied from https://github.com/cmuphyscomp/hmv-s16
-LICENSE.txt	origin description and license for optirx.py
-
-README.txt	this file
+README.txt		this file
