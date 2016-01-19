@@ -4,6 +4,11 @@ ghutil.trees
 Utility functions related to creating Data Trees in Grasshopper.
 """
 
+# import the Grasshopper Data Tree API
+import clr
+clr.AddReference("Grasshopper")
+import Grasshopper as gh
+
 #================================================================
 # from https://gist.github.com/piac/ef91ac83cb5ee92a1294
 def list_to_tree(input, none_and_holes=True, source=[0]):
@@ -21,5 +26,14 @@ def list_to_tree(input, none_and_holes=True, source=[0]):
                 if none_and_holes: tree.Insert(item,path,i)
                 elif item is not None: tree.Add(item,path)
     if input is not None: t=Tree[object]();proc(input,t,source[:]);return t
+
+#================================================================
+def vectors_to_data_tree(vector_list):
+    """Convert a list of Python tuples of floats to a GH datatree."""
+    dataTree = gh.DataTree[float]()
+    for i,vec in enumerate(vector_list):
+        for value in vec:
+            dataTree.Add(value,gh.Kernel.Data.GH_Path(i))
+    return dataTree
 
 #================================================================
