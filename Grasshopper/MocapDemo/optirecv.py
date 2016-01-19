@@ -3,10 +3,8 @@
 # Copyright (c) 2016, Garth Zeglin. All rights reserved. Licensed under the
 # terms of the BSD 3-clause license.
 
-# import the Grasshopper Data Tree API
-import clr
-clr.AddReference("Grasshopper")
-import Grasshopper as gh
+# use RhinoCommon API
+import Rhino
 
 # Make sure that the Python libraries that are also contained within this course
 # package are on the load path. This adds the python/ folder to the load path
@@ -22,29 +20,34 @@ import optirx
 # import a quaternion conversion function
 from optitrack.geometry import quaternion_to_xaxis_yaxis
 
-#== support functions ====================================================
-def vectors_to_data_tree(vector_list):
-    """ Converts a list of Python tuples to a GH datatree."""
-    dataTree = gh.DataTree[float]()
-    for i,vec in enumerate(vector_list):
-        for value in vec:
-            dataTree.Add(value,gh.Kernel.Data.GH_Path(i))
-    return dataTree
-        
-#================================================================ 
+# load the Grasshopper utility functions from the course packages
+from ghutil import *
+
+#================================================================
+# Convert from default Optitrack coordinates with a XZ ground plane to default
+# Rhino coordinates with XY ground plane.
+
+def rotated_point(pt):
+    return [pt[0], -pt[2], pt[1]]
+
+def rotated_orientation(q):
+    return [q[0], -q[2], q[1], q[3]]
+
+#================================================================
 class OptitrackReceiver(object):
     def __init__(self, version_string):
         # The version string should be of the form "2900" and should match the SDK version of the Motive software.
         # E.g. Motive 1.9 == SDK 2.9.0.0 == "2900"
         self.sdk_version = tuple(map(int,version_string)) # e.g. result is (2,9,0,0)
- 
+
         # create a multicast UDP receiver socket
         self.receiver = optirx.mkdatasock()
-        
+
         # set non-blocking mode so the socket can be polled
         self.receiver.setblocking(0)
 
-        # Keep track of the most recent results.  These are stored as normal Python list structures.
+        # Keep track of the most recent results.  These are stored as normal Python list structures, but
+        # already rotated into Rhino coordinate conventions.
         self.positions = list()  # list of [x,y,z] points
         self.rotations = list()  # list of [x,y,z,w] quaternions
         return
@@ -55,15 +58,18 @@ class OptitrackReceiver(object):
         if len(self.rotations) == 0:
             return None, None, None, None
 
-        # generate a list of (xaxis,yaxis) tuples and then transpose it into
-        # separate lists
+        # generate a list of (xaxis,yaxis) tuples and then transpose it into separate lists
         xaxes, yaxes = zip( *[quaternion_to_xaxis_yaxis(rot) for rot in self.rotations] )
 
-        # convert all Python lists of lists into Grasshopper data tree objects
-        p_tree = vectors_to_data_tree(self.positions)
+        # return the positions as a list of Point3d objects
+        p_tree = [Rhino.Geometry.Point3d(*pt) for pt in self.positions]
+
+        # convert the quaternions stored as a Python lists of lists into a Grasshopper data tree object
         r_tree = vectors_to_data_tree(self.rotations)
-        x_tree = vectors_to_data_tree(xaxes)
-        y_tree = vectors_to_data_tree(yaxes)
+
+        # return the basis vectors as lists of Point3d objecs
+        x_tree = [Rhino.Geometry.Point3d(*vec) for vec in xaxes]
+        y_tree = [Rhino.Geometry.Point3d(*vec) for vec in yaxes]
 
         return p_tree, r_tree, x_tree, y_tree
 
@@ -73,7 +79,7 @@ class OptitrackReceiver(object):
             data = self.receiver.recv(optirx.MAX_PACKETSIZE)
         except:
             return False
-                  
+
         packet = optirx.unpack(data, version=self.sdk_version)
 
         if type(packet) is optirx.SenderData:
@@ -85,12 +91,15 @@ class OptitrackReceiver(object):
             print "Received frame data with %d rigid bodies." % nbodies
             if nbodies > 0:
                 print packet.rigid_bodies[0]
-                self.positions = [ body.position for body in packet.rigid_bodies]
-                self.rotations = [ body.orientation for body in packet.rigid_bodies]
+
+                # rotate the coordinates into Rhino conventions and save them in the object instance as Python lists
+                self.positions = [ rotated_point(body.position) for body in packet.rigid_bodies]
+                self.rotations = [ rotated_orientation(body.orientation) for body in packet.rigid_bodies]
+
                 # return a new data indication
                 return True
-                
+
         # else return a null result
         return True
 
-#================================================================ 
+#================================================================

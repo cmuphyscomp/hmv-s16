@@ -1,5 +1,5 @@
-# This is a copy of the receiver script in the ghpython object in MocapDemo.gh.
-
+﻿# demo_receiver.py - the motion capture script in the ghpython object in MocapDemo.gh
+#
 # Demonstration of receiving and parsing an Optitrack motion capture real-time stream.
 # This is normally polled from a timer.
 #
@@ -32,7 +32,7 @@ else:
     if port is None:
         port = optirecv.OptitrackReceiver(version)
         scriptcontext.sticky['mocap_port'] = port
-
+    
     received = True
     while received:
         received = port.poll()
