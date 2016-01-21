@@ -1,5 +1,6 @@
 # cruft
 .DS_Store
+desktop.ini
 
 # object files
 *.pyc
