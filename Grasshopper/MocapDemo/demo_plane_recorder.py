@@ -23,7 +23,15 @@ import scriptcontext
 class PlaneRecorder(object):
     def __init__(self):
         self.planes = []
+        # state for debouncing capture input
+        self._last_capture_value = False
         return
+
+    def debounced_input(self, capture):
+        """Only return true on the transition from False to True."""
+        value = capture and (not self._last_capture_value)
+        self._last_capture_value = capture
+        return value
 
     def add_plane(self, plane):
         self.planes.append(plane)
@@ -42,7 +50,7 @@ else:
         recorder = PlaneRecorder()
         scriptcontext.sticky['plane_recorder'] = recorder
 
-if capture:
+if recorder.debounced_input(capture):
     recorder.add_plane(input)
 
 planes = recorder.planes
