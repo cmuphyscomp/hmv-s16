@@ -4,6 +4,7 @@
 #
 # inputs
 #   path    - string with the full path to the CSV file
+#   stride  - the sequence interval between successive points; 1 returns all points, >1 subsamples
 #
 # outputs
 #   out      - debugging text stream
@@ -23,4 +24,4 @@ print "Found rigid bodies:", take.rigid_bodies.keys()
 
 # emit all return values
 names = take.rigid_bodies.keys()
-position, xaxis, yaxis = optiload.make_data_trees(take)
+planes = optiload.all_Planes(take, int(stride))
