@@ -23,15 +23,8 @@ from optitrack.geometry import quaternion_to_xaxis_yaxis
 # load the Grasshopper utility functions from the course packages
 from ghutil import *
 
-#================================================================
-# Convert from default Optitrack coordinates with a XZ ground plane to default
-# Rhino coordinates with XY ground plane.
-
-def rotated_point(pt):
-    return [pt[0], -pt[2], pt[1]]
-
-def rotated_orientation(q):
-    return [q[0], -q[2], q[1], q[3]]
+# share the mocap coordinate conversion code with the CSV loader
+from optiload import rotated_point, rotated_orientation, plane_or_null
 
 #================================================================
 class OptitrackReceiver(object):
@@ -48,31 +41,59 @@ class OptitrackReceiver(object):
 
         # Keep track of the most recent results.  These are stored as normal Python list structures, but
         # already rotated into Rhino coordinate conventions.
-        self.positions = list()  # list of [x,y,z] points
-        self.rotations = list()  # list of [x,y,z,w] quaternions
+        self.positions = list()  # list of Point3d objects
+        self.rotations = list()  # list of [x,y,z,w] quaternions as Python list of numbers
+        self.bodynames = list()  # list of name strings associated with the bodies
         return
 
-    def make_data_trees(self):
-        """Return all received or computed values as Grasshopper data trees."""
+    #================================================================
+    def make_plane_list(self):
+        """Return the received rigid body frames as a list of Plane or None (for missing data), one entry per rigid body stream."""
 
-        if len(self.rotations) == 0:
-            return None, None, None, None
+        # convert each quaternion into a pair of X,Y basis vectors
+        basis_vectors = [quaternion_to_xaxis_yaxis(rot) for rot in self.rotations]
 
-        # generate a list of (xaxis,yaxis) tuples and then transpose it into separate lists
-        xaxes, yaxes = zip( *[quaternion_to_xaxis_yaxis(rot) for rot in self.rotations] )
+        # Extract the X and Y axis basis elements into lists of Vector3d objects.
+        xaxes = [Rhino.Geometry.Vector3d(*(basis[0])) for basis in basis_vectors]
+        yaxes = [Rhino.Geometry.Vector3d(*(basis[1])) for basis in basis_vectors]
 
-        # return the positions as a list of Point3d objects
-        p_tree = [Rhino.Geometry.Point3d(*pt) for pt in self.positions]
+        # Generate either Plane or None for each coordinate frame.
+        planes = [plane_or_null(origin, x, y) for origin,x,y in zip(self.positions, xaxes, yaxes)]
+        return planes
 
-        # convert the quaternions stored as a Python lists of lists into a Grasshopper data tree object
-        r_tree = vectors_to_data_tree(self.rotations)
+    #================================================================
+    def _markers_coincide(self, m1, m2):
+        """For now, an exact match (could be fuzzy match)."""
+        return m1[0] == m2[0] and m1[1] == m2[1] and m1[2] == m2[2]
+        
+    def _identify_rigid_bodies(self, sets, bodies):
+        """Compare marker positions to associate a named marker set with a rigid body.
+        :param sets: dictionary of lists of marker coordinate triples
+        :param bodies: list of rigid bodies
+        :return: dictionary mapping body ID numbers to body name
 
-        # return the basis vectors as lists of Point3d objecs
-        x_tree = [Rhino.Geometry.Point3d(*vec) for vec in xaxes]
-        y_tree = [Rhino.Geometry.Point3d(*vec) for vec in yaxes]
+        Some of the relevant fields:
+        bodies[].markers  is a list of marker coordinate triples
+        bodies[].id       is an integer body identifier with the User Data field specified for the body in Motive
+        """
 
-        return p_tree, r_tree, x_tree, y_tree
+        # for now, do a simple direct comparison on a single marker on each body
+        mapping = dict()
+        for body in bodies:
+            marker1 = body.markers[0]
+            try:
+                for name,markerset in sets.items():
+                    if name != 'all':
+                        for marker in markerset:
+                            if self._markers_coincide(marker1, marker):
+                                mapping[body.id] = name
+                                raise StopIteration
+            except StopIteration:
+                pass
 
+        return mapping
+                         
+    #================================================================
     def poll(self):
         """Poll the mocap receiver port and return True if new data is available."""
         try:
@@ -86,20 +107,39 @@ class OptitrackReceiver(object):
             version = packet.natnet_version
             print "NatNet version received:", version
 
-        if type(packet) is optirx.FrameOfData:
+        elif type(packet) is optirx.FrameOfData:
             nbodies = len(packet.rigid_bodies)
-            print "Received frame data with %d rigid bodies." % nbodies
+            # print "Received frame data with %d rigid bodies." % nbodies
+            # print "Received FrameOfData with sets:", packet.sets
+            # There appears to be one marker set per rigid body plus 'all'.
+            # print "Received FrameOfData with names:", packet.sets.keys()
+            # print "First marker of first marker set:", packet.sets.values()[0][0]
+            # print "Received FrameOfData with rigid body IDs:", [body.id for body in packet.rigid_bodies]
+            # print "First marker of first rigid body:", packet.rigid_bodies[0].markers[0]
+            # print "First tracking flag of first rigid body:", packet.rigid_bodies[0].tracking_valid
+
+            # compare markers to associate the numbered rigid bodies with the named marker sets
+            mapping = self._identify_rigid_bodies( packet.sets, packet.rigid_bodies)
+            # print "Body identification:", mapping
+            
             if nbodies > 0:
-                print packet.rigid_bodies[0]
+                # print packet.rigid_bodies[0]
 
                 # rotate the coordinates into Rhino conventions and save them in the object instance as Python lists
-                self.positions = [ rotated_point(body.position) for body in packet.rigid_bodies]
+                self.positions = [ rotated_point(body.position) if body.tracking_valid else None for body in packet.rigid_bodies]
                 self.rotations = [ rotated_orientation(body.orientation) for body in packet.rigid_bodies]
-
+                self.bodynames = [ mapping.get(body.id, '<Missing>') for body in packet.rigid_bodies]
+                
                 # return a new data indication
                 return True
 
+        elif type(packet) is optirx.ModelDefs:
+            print "Received ModelDefs:", packet
+
+        else:
+            print "Received unhandled NatNet packet type:", packet
+            
         # else return a null result
-        return True
+        return False
 
 #================================================================
