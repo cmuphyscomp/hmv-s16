@@ -5,8 +5,6 @@ Utility functions related to creating Data Trees in Grasshopper.
 """
 
 # import the Grasshopper Data Tree API
-import clr
-clr.AddReference("Grasshopper")
 import Grasshopper as gh
 
 #================================================================

@@ -1,3 +1,6 @@
+# ignore the top-level debugging folder where temporary scripts can be stashed
+debugging/
+
 # cruft
 .DS_Store
 desktop.ini
