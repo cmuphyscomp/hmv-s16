@@ -13,7 +13,8 @@
 
 import Rhino
 import System.Guid
-import ghrhinodoc
+import pythonlibpath; pythonlibpath.add_library_path()
+import ghutil.ghrhinodoc as ghrhinodoc
 
 if guid is not None:
     # Fetch the layer index, creating the layer if not present.
