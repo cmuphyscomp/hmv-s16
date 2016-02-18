@@ -15,7 +15,8 @@
 
 import Rhino
 import System.Guid
-import ghrhinodoc
+import pythonlibpath; pythonlibpath.add_library_path()
+import ghutil.ghrhinodoc as ghrhinodoc
 
 # Fetch the layer index, creating the layer if not present.
 layer_name = str(layer)

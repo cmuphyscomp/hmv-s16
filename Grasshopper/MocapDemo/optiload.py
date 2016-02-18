@@ -95,4 +95,3 @@ def all_Planes(take, stride=1):
     # Recursively convert from a Python tree to a data tree.
     return list_to_tree(planes)
 
-#================================================================

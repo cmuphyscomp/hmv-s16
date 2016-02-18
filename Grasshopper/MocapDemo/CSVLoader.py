@@ -1,4 +1,4 @@
-﻿# demo_reader.py - the file loader script in the ghpython object in MocapDemo.gh.
+﻿# CSVLoader.py - the file loader script in the ghpython object in MocapDemo.gh.
 
 # Demonstration of parsing an Optitrack motion capture CSV file.
 #
@@ -9,10 +9,7 @@
 # outputs
 #   out      - debugging text stream
 #   names    - data tree of body names
-#   position - data tree of position tuples
-#   xaxis    - data tree of X axis unit vectors (computed from orientations)
-#   yaxis    - data tree of Y axis unit vectors (computed from orientations)
-
+#   planes   - data tree of Plane trajectories, one branch per rigid body, each leaf a list of Planes
 
 # import the Optitrack file loader from the same folder
 import optiload

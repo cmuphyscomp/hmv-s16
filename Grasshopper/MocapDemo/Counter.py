@@ -1,4 +1,4 @@
-﻿# demo_counter.py
+﻿# Counter.py - general purpose counter block for use in ghpython object
 # inputs
 #  name   - counter name token string
 #  enable - bool to enable counting
