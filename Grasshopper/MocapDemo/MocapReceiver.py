@@ -9,7 +9,7 @@
 #
 # outputs
 #   out      - debugging text stream
-#   received - flag true if new data was received
+#   received - integer number of new frames received
 #   planes   - list of Plane objects or None, one per rigid body stream
 
 # use persistent state context
@@ -31,15 +31,24 @@ else:
         port = optirecv.OptitrackReceiver(version)
         scriptcontext.sticky['mocap_port'] = port
 
-    # Poll the port as long as data is available, throwing away any redundant
-    # samples.  It is more important to keep up with real time, and at 120Hz, it
-    # is unlikely that this will keep up.
-    received = True
-    while received:
-        received = port.poll()
-        
-    # always set the output variables so the most recent values are available
-    # position, orient, xaxis, yaxis = port.make_data_trees()
-    planes = port.make_plane_list()
+    # Poll the port as long as data is available, accumulating all
+    # frames.  It is unlikely that Grasshopper will keep up with the
+    # 120 Hz mocap sampling rate, butit is important to have the
+    # continuous trajectory available for analysis and recording.
+    receiving = True
+    frames = list()
+    while receiving:
+        receiving = port.poll()
+        if receiving:
+            frames.append(port.make_plane_list())
+
+    # Convert the frame list into a data tree for output.  As accumulated, it is a Python list of lists:
+    # [[body1_sample0, body2_sample0, body3_sample0, ...], [body1_sample1, body2_sample1, body3_sample1, ...], ...]
+    planes = optirecv.frames_to_tree(frames)
+    received = len(frames)
+    
+    # Emit the list of body names in the order corresponding to the
+    # branches in the trajectory data tree.  The ordering is stable as
+    # determined by the configuration in the Motive project.
     names  = port.bodynames
 
