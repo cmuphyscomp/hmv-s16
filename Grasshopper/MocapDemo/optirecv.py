@@ -28,13 +28,14 @@ from optiload import rotated_point, rotated_orientation, plane_or_null
 
 #================================================================
 class OptitrackReceiver(object):
-    def __init__(self, version_string):
+    def __init__(self, version_string, ip_address=None):
         # The version string should be of the form "2900" and should match the SDK version of the Motive software.
         # E.g. Motive 1.9 == SDK 2.9.0.0 == "2900"
+        #      Motive 1.8 == SDK 2.8.0.0 == "2800"
         self.sdk_version = tuple(map(int,version_string)) # e.g. result is (2,9,0,0)
 
         # create a multicast UDP receiver socket
-        self.receiver = optirx.mkdatasock()
+        self.receiver = optirx.mkdatasock(ip_address=ip_address)
 
         # set non-blocking mode so the socket can be polled
         self.receiver.setblocking(0)

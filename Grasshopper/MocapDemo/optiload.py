@@ -96,3 +96,13 @@ def all_Planes(take, stride=1):
     return list_to_tree(planes)
 
 #================================================================
+def frames_to_tree(frame_list):
+    """Utility function to convert a list of list of Plane objects representing a trajectory segment into a GH data tree."""
+
+    # Transpose the frame list for output.  As accumulated, it is a list of lists:
+    # [[body1_sample0, body2_sample0, body3_sample0, ...], [body1_sample1, body2_sample1, body3_sample1, ...], ...]
+    segment = zip(*frame_list)
+    
+    # Convert a Python list-of-lists into a data tree.  Segment is a list of trajectories:
+    # [[body1_sample0, body1_sample1, body1_sample2, ...], [body2_sample0, body2_sample1, body2_sample2, ...], ...]
+    planes = list_to_tree(segment)
