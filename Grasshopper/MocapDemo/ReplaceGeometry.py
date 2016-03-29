@@ -24,7 +24,7 @@ import System.Guid
 import pythonlibpath; pythonlibpath.add_library_path()
 import ghutil.ghrhinodoc as ghrhinodoc
 
-if update and guid is not None:
+if update and guids is not None:
     # Fetch the layer index, creating the layer if not present.
     layer_name = str(layer)
     layer_index = ghrhinodoc.fetch_or_create_layer_index(layer_name)
