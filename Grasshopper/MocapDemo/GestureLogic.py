@@ -57,12 +57,18 @@ import ghutil.ghrhinodoc as ghrhinodoc
 class EditorLogic(object):
     """Utility class to manage the state of the interactive editor."""
 
-    def __init__(self, _layer_name = 'Cards'):
+    def __init__(self, _layer_name = 'Cards', _all_names = []):
         self.layer_name = _layer_name
         self._last_setselect = False # debounce variable
         self.attached = False
         self.interval_counter = 0
         self.mocap_dt = 1.0 / 120 # sampling rate of the motion capture stream
+
+        # list of strings in which to accumulate messages for output
+        self.log       = ["Editor initialized for layer %s." % self.layer_name]    
+         
+        # initialize the default sets of object names based on those found on the RhinoDoc layer
+        self._update_namesets(_all_names)
         
         # freshly created objects: poses and names
         self.new_object_poses = list()
@@ -71,14 +77,14 @@ class EditorLogic(object):
         # the current selection
         self.selection = None
         self.docguids = None
-
+        self.selection_bb = None
+        self.selection_bb_size = None
+        
         # coordinate transformation for group edits
         self.transform = None  
         self.motion    = None
         self.xforms    = []    # list of transforms, one per selected object
         
-        # list of strings in which to accumulate messages for output
-        self.log       = ["Editor initialized for layer %s." % self.layer_name]    
         return
 
     def add_new_object_pose(self, plane):   
@@ -131,7 +137,8 @@ class EditorLogic(object):
         if len(self.unused_names) == 0:
             self.logprint("Warning: no more object names available.")
             return None
-        new_name = [name for name in self.unused_names][0]
+        # return new names in numerical order for clarity
+        new_name = sorted(self.unused_names)[0]
         self.unused_names.remove(new_name)
         return new_name
 
@@ -140,7 +147,22 @@ class EditorLogic(object):
         names = [obj.Attributes.Name for obj in all_objects]
         self.set_namesets(all_names, names)
         return
-    
+  
+    def _compute_set_bounding_box(self, selection):
+        if selection is None or len(selection) == 0:
+            return None
+            
+        # compute bounding box for all objects in a set
+        boxes = [obj.GetBoundingBox(True) for obj in selection]
+
+        # compute union of all boxes
+        union = boxes[0]
+        # destructively merge this with the other boxes
+        for b in boxes[1:]:
+            union.Union(b)
+        return union, union.Diagonal.Length
+
+
     def manage_user_selection(self, setselect, selection, selguids, all_names):
         """Process the user 'Set Selection' input, updating the editor state for any new
         objects and names as needed."""
@@ -151,6 +173,9 @@ class EditorLogic(object):
             if setselect == True:
                 self.selection = selection
                 self.docguids = selguids
+                
+                self.selection_bb, self.selection_bb_size = self._compute_set_bounding_box(selection)
+                self.logprint("Updated selection bounding box to %s, diagonal size %f" % (self.selection_bb, self.selection_bb_size))
 
                 # reset the pick and place state
                 self.attached  = False
@@ -389,9 +414,11 @@ class EditorLogic(object):
                     rot_xform = Rotation_Factory(angle, axis, center)
                     self.transform = self.transform * rot_xform
                     
-                    # apply a weighted displacement to each object transform
-                    weights = [min(1.0, 0.1/(dist*dist)) if dist < 1.0 else 0.0 for dist in distances]
-                    self.logprint("Weights: %s" % (weights,))
+                    # Apply a weighted displacement to each object transform.  The scaling matches the rolloff of the 
+                    # effect to be proportional to the size of the bounding box of the moving objects.
+                    scale = 0.1 * self.selection_bb_size * self.selection_bb_size
+                    weights = [min(1.0, scale/(dist*dist)) if dist > 0.0 else 1.0 for dist in distances]
+                    # self.logprint("Weights: %s" % (weights,))
                     rotations = [Rotation_Factory(angle*weight, axis, center) for weight in weights]
                     self.xforms = [xform*rot for xform,rot in zip(self.xforms, rotations)]
 
@@ -407,7 +434,7 @@ class EditorLogic(object):
 # create or re-create the editor state as needed
 editor = sc.sticky.get(name)
 if editor is None or reset:
-    editor = EditorLogic()
+    editor = EditorLogic('Cards', all_names)
     sc.sticky[name] = editor
 
 # set default output values
