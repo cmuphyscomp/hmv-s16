@@ -58,7 +58,9 @@ else:
     recorder.add_planes(inputs)
 
 if capture is not None:
-    recorder.capture_plane(capture)
+    # The capture index is non-positive: zero means 'now', negative means a recent sample.  So the value is
+    # biased by -1 to be an index relative to the end of the recorded poses.
+    recorder.capture_plane(capture-1)
  
 planes = recorder.planes
 print "Buffer has seen %d planes, currently holding %d selected planes." % (recorder.buffer.samples, len(planes))

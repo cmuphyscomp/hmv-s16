@@ -213,10 +213,17 @@ class Take(object):
     # ================================================================
     def _read_data(self, stream, verbose = False):
         """Process frame data rows from the CSV stream."""
-        for row in stream:
+
+        # Note that the frame_num indices do not necessarily start from zero,
+        # but the setter functions assume that the array indices do.  This
+        # implementation just ignores the original frame numbers, the frames are
+        # renumbered from zero.
+        for row_num, row in enumerate(stream):
             frame_num = int(row[0])
             frame_t   = float(row[1])
             values    = row[2:]
+
+            # if verbose: print "Processing row_num %d, frame_num %d, time %f." % (row_num, frame_num, frame_t)
 
             # add the new frame time to each object storing a trajectory
             for body in self.rigid_bodies.values():
@@ -225,6 +232,6 @@ class Take(object):
             # process the columns of interest
             for mapping in self._column_map:
                 # each mapping is a namedtuple with a setter method, column index, and axis name
-                mapping.setter( frame_num, mapping.axis, values[mapping.column] )
+                mapping.setter( row_num, mapping.axis, values[mapping.column] )
 
     # ================================================================
